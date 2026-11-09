@@ -177,23 +177,32 @@ const CLINICA = {
 </div>
 
 <div class="card">
-  <div class="sec">Confirmação das informações</div>
-  <div class="lgpd" style="max-height:none;">
-    Os dados desta ficha serão usados apenas para o seu atendimento em <b id="tClin"></b>, com sigilo. Para consultar, corrigir ou pedir a exclusão dos seus dados, fale com <b id="tProf"></b> pelo WhatsApp <b id="tZap"></b> ou e-mail <b id="tMail"></b>.<span id="tReg" style="display:none"></span>
+  <div class="sec">Termo de Consentimento e Proteção de Dados (LGPD)</div>
+  <div class="lgpd">
+    <b>TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO</b><br><br>
+    Eu, paciente identificado(a) nesta ficha, declaro que fui informado(a) sobre os procedimentos estéticos realizados pela profissional <b id="tProf"></b><span id="tReg" style="display:none"></span>, na <b id="tClin"></b>, e manifesto meu consentimento livre, voluntário e esclarecido.<br><br>
+    <b>1. Procedimentos e objetivos:</b> Compreendo que os procedimentos têm caráter estético, que os resultados variam de pessoa para pessoa e que não há garantia de resultado específico.<br><br>
+    <b>2. Riscos e efeitos esperados:</b> Fui informado(a) sobre possíveis reações como vermelhidão, sensibilidade, descamação e outros efeitos transitórios. Comprometo-me a comunicar imediatamente qualquer reação inesperada.<br><br>
+    <b>3. Veracidade das informações:</b> Declaro que as informações desta ficha, inclusive sobre saúde, alergias, medicamentos e gestação, são verdadeiras e completas, ciente de que omissões podem comprometer minha segurança.<br><br>
+    <b>4. Orientações e fotografias:</b> Comprometo-me a seguir as orientações pré e pós-procedimento. O registro fotográfico, quando necessário ao acompanhamento clínico, depende da minha autorização; o uso de imagens para divulgação exige autorização expressa e separada.<br><br>
+    <b>5. Tratamento de dados (LGPD — Lei 13.709/2018):</b> Meus dados pessoais e de saúde (dados sensíveis) serão tratados exclusivamente para fins de atendimento, acompanhamento e registro clínico, com sigilo, e guardados pelo prazo exigido para o prontuário. Não serão compartilhados com terceiros, salvo obrigação legal ou determinação de autoridade. Posso pedir confirmação do tratamento, acesso, correção, anonimização ou exclusão dos meus dados e revogar este consentimento pelo WhatsApp <b id="tZap"></b> ou e-mail <b id="tMail"></b>.<br><br>
+    <b>6. Consentimento:</b> Confirmo que li, compreendi e concordo com as cláusulas acima.
   </div>
   <label class="aceite">
     <input type="checkbox" id="aceite" required>
-    <span>Declaro que as informações preenchidas são verdadeiras e completas.</span>
+    <span>Li e concordo com o termo de consentimento e com o tratamento dos meus dados pessoais e de saúde para fins de atendimento, conforme a LGPD.</span>
   </label>
 
   <div style="margin-top:20px;">
     <div class="field">
-      <label>Assinatura — Digite seu nome completo <span class="req">*</span></label>
-      <input id="inputAssinatura" placeholder="Digite seu nome completo para assinar" oninput="atualizarAssinatura(this.value)" autocomplete="name" style="font-size:1rem;">
+      <label>Nome completo (identificação) <span class="req">*</span></label>
+      <input id="inputAssinatura" placeholder="Digite seu nome completo" autocomplete="name" style="font-size:1rem;">
     </div>
-    <div id="assinPreview" style="display:none;">
-      <div class="assin-preview" id="assinFonte"></div>
-      <p style="font-size:.72rem;color:var(--cream-dim);text-align:center;" id="assinData"></p>
+    <div class="field">
+      <label>Assinatura — desenhe com o dedo ou o mouse <span class="req">*</span></label>
+      <canvas id="sigCanvas" style="width:100%;height:150px;border:2px dashed var(--line);border-radius:10px;background:#fff;touch-action:none;-webkit-user-select:none;user-select:none;display:block;"></canvas>
+      <button type="button" class="btn btn-ghost" style="margin-top:8px;padding:9px;font-size:.85rem;" onclick="limparAssinatura()">🗑️ Limpar assinatura</button>
+      <p class="note">Assinatura eletrônica simples (Lei 14.063/2020), registrada com data e hora.</p>
     </div>
   </div>
 </div>
@@ -247,6 +256,34 @@ const checks=n=>[...document.querySelectorAll(`input[name="${n}"]:checked`)].map
   });
 })();
 const fmtData=d=>d&&/^\d{4}-\d{2}-\d{2}$/.test(d)?d.split('-').reverse().join('/'):(d||'');
+
+// Assinatura desenhada (dedo/mouse) — Pointer Events, sem biblioteca externa
+let sigVazio=true;
+(function(){
+  const c=document.getElementById('sigCanvas');if(!c)return;
+  const ctx=c.getContext('2d');let des=false,ult=null,dpr=1;
+  function ajustar(){
+    const r=c.getBoundingClientRect();if(!r.width)return;
+    dpr=window.devicePixelRatio||1;
+    const w=Math.round(r.width*dpr),h=Math.round(r.height*dpr);
+    if(c.width!==w||c.height!==h){
+      const img=sigVazio?null:c.toDataURL();c.width=w;c.height=h;
+      if(img){const im=new Image();im.onload=()=>ctx.drawImage(im,0,0,w,h);im.src=img;}
+    }
+    ctx.lineWidth=2.4*dpr;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#2c1810';ctx.fillStyle='#2c1810';
+  }
+  function pos(e){const r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*dpr,y:(e.clientY-r.top)*dpr};}
+  c.addEventListener('pointerdown',e=>{e.preventDefault();ajustar();des=true;ult=pos(e);
+    try{c.setPointerCapture(e.pointerId);}catch(_){}
+    ctx.beginPath();ctx.arc(ult.x,ult.y,ctx.lineWidth/2,0,Math.PI*2);ctx.fill();sigVazio=false;});
+  c.addEventListener('pointermove',e=>{if(!des)return;e.preventDefault();const p=pos(e);
+    ctx.beginPath();ctx.moveTo(ult.x,ult.y);ctx.lineTo(p.x,p.y);ctx.stroke();ult=p;});
+  ['pointerup','pointercancel'].forEach(ev=>c.addEventListener(ev,()=>{des=false;}));
+  c.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+  window.addEventListener('resize',ajustar);ajustar();
+  window.limparAssinatura=function(){ctx.clearRect(0,0,c.width,c.height);sigVazio=true;};
+  window.capturarAssinatura=function(){window._sigImg=sigVazio?null:c.toDataURL('image/png');window._sigRatio=c.width/c.height;};
+})();
 const idade=d=>{if(!d)return'';const h=new Date(),n=new Date(d);let i=h.getFullYear()-n.getFullYear();if(h.getMonth()-n.getMonth()<0||(h.getMonth()-n.getMonth()===0&&h.getDate()<n.getDate()))i--;return ` (${i} anos)`;};
 
 let dadosGlobais=null;
@@ -277,8 +314,10 @@ function gerar(){
   if(!nome){alert('Por favor, informe seu nome completo.');return;}
   if(!get('dataNasc')){alert('Informe a data de nascimento completa no formato dd/mm/aaaa (ex.: 15/03/1990).');return;}
   if(!get('tel')){alert('Por favor, informe seu telefone.');return;}
-  if(!document.getElementById('aceite').checked){alert('Por favor, confirme que as informações são verdadeiras.');return;}
-  if(!assin){alert('Por favor, digite seu nome no campo de assinatura eletrônica.');return;}
+  if(!document.getElementById('aceite').checked){alert('Por favor, aceite o termo de consentimento.');return;}
+  if(!assin){alert('Por favor, digite seu nome completo.');return;}
+  if(sigVazio){alert('Por favor, desenhe sua assinatura no quadro.');return;}
+  capturarAssinatura();
   const doencas=checks('doenca')+(get('outraDoenca')?', '+get('outraDoenca'):'');
   dadosGlobais={
     nome,dataNasc:get('dataNasc'),cpf:get('cpf'),tel:get('tel'),email:get('email'),
@@ -397,32 +436,37 @@ function gerarPDF(){
 
   // Termo
   if(y+35>270){doc.addPage();y=15;}
-  sec('Declaração');
+  sec('Consentimento — LGPD');
   doc.setFillColor(...bgCard);doc.roundedRect(M,y,W-M*2,20,1.5,1.5,'F');
   doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...dimmed);
-  const termoTxt='Declaro que as informações prestadas nesta ficha são verdadeiras e completas.';
+  const termoTxt='Declaro que li e concordo com o Termo de Consentimento Livre e Esclarecido, incluindo as cláusulas sobre procedimentos, riscos, fotografias e tratamento de dados pessoais e de saúde (LGPD — Lei 13.709/2018). As informações prestadas são verdadeiras.';
   doc.text(doc.splitTextToSize(termoTxt,W-M*2-6),M+3,y+5);
   y+=23;
 
   // Assinatura
-  if(y+30>270){doc.addPage();y=15;}
-  doc.setFillColor(253,240,232);doc.roundedRect(M,y,W-M*2,28,2,2,'F');
-  doc.setDrawColor(...copper);doc.roundedRect(M,y,W-M*2,28,2,2,'S');
-  doc.setFont('times','bolditalic');doc.setFontSize(20);doc.setTextColor(...copper);
-  doc.text(d.assinatura,M+6,y+14);
+  if(y+50>270){doc.addPage();y=15;}
+  doc.setFillColor(253,240,232);doc.roundedRect(M,y,W-M*2,48,2,2,'F');
+  doc.setDrawColor(...copper);doc.roundedRect(M,y,W-M*2,48,2,2,'S');
+  if(window._sigImg){try{const hh=24,ww=Math.min(80,hh*(window._sigRatio||2.5));doc.addImage(window._sigImg,'PNG',M+6,y+3,ww,hh);}catch(e){}}
+  doc.setDrawColor(...cream);doc.line(M+6,y+29,M+95,y+29);
+  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...cream);
+  doc.text(d.assinatura,M+6,y+34);
   doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...dimmed);
-  doc.text('Assinado em '+d.aceiteData,M+6,y+22);
-  y+=32;
+  doc.text('Assinado eletronicamente em '+d.aceiteData,M+6,y+39);
+  doc.text('Assinatura eletrônica simples (Lei 14.063/2020), registrada com data e hora.',M+6,y+44);
+  y+=52;
 
   // Código
-  if(y+18>270){doc.addPage();y=15;}
   const cod=document.getElementById('codigoExibido').textContent;
-  doc.setFillColor(253,240,232);doc.roundedRect(M,y,W-M*2,16,2,2,'F');
-  doc.setDrawColor(...copper);doc.roundedRect(M,y,W-M*2,16,2,2,'S');
+  doc.setFont('courier','normal');doc.setFontSize(6.5);
+  const codL=doc.splitTextToSize(cod,W-M*2-6),codH=11+codL.length*2.8;
+  if(y+codH+4>270){doc.addPage();y=15;}
+  doc.setFillColor(253,240,232);doc.roundedRect(M,y,W-M*2,codH,2,2,'F');
+  doc.setDrawColor(...copper);doc.roundedRect(M,y,W-M*2,codH,2,2,'S');
   doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...copper);
   doc.text('CÓDIGO DE IMPORTAÇÃO:',M+3,y+5);
   doc.setFont('courier','normal');doc.setFontSize(6.5);doc.setTextColor(...cream);
-  doc.text(doc.splitTextToSize(cod,W-M*2-6),M+3,y+10);
+  doc.text(codL,M+3,y+10);
 
   // Rodapé
   doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...dimmed);
