@@ -73,7 +73,7 @@ const CLINICA = {
   <div class="sec">Dados Pessoais</div>
   <div class="field"><label>Nome completo <span class="req">*</span></label><input id="nome" placeholder="Seu nome completo" required></div>
   <div class="g2">
-    <div class="field"><label>Data de nascimento <span class="req">*</span></label><input type="date" id="dataNasc" required></div>
+    <div class="field"><label>Data de nascimento <span class="req">*</span></label><input type="text" id="dataNascTxt" inputmode="numeric" autocomplete="bday" placeholder="dd/mm/aaaa" maxlength="10" required><input type="hidden" id="dataNasc"></div>
     <div class="field"><label>CPF</label><input id="cpf" placeholder="000.000.000-00" maxlength="14"></div>
   </div>
   <div class="g2">
@@ -227,6 +227,26 @@ const CLINICA = {
 const get=id=>document.getElementById(id)?.value?.trim()||'';
 const radio=n=>{const e=document.querySelector(`input[name="${n}"]:checked`);return e?e.value:'';};
 const checks=n=>[...document.querySelectorAll(`input[name="${n}"]:checked`)].map(e=>e.value).join(', ');
+
+// Data de nascimento: digitação direta com máscara dd/mm/aaaa (guarda ISO no campo oculto)
+(function(){
+  const t=document.getElementById('dataNascTxt'),h=document.getElementById('dataNasc');
+  if(!t)return;
+  t.addEventListener('input',()=>{
+    let v=t.value.replace(/\D/g,'').slice(0,8);
+    if(v.length>4)v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);
+    else if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);
+    t.value=v;
+    h.value='';t.setCustomValidity('');
+    if(v.length===10){
+      const [d,m,a]=v.split('/').map(Number),dt=new Date(a,m-1,d);
+      const ok=dt.getFullYear()===a&&dt.getMonth()===m-1&&dt.getDate()===d&&a>=1900&&dt<=new Date();
+      if(ok){h.value=a+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');}
+      else t.setCustomValidity('Data inválida');
+    }
+  });
+})();
+const fmtData=d=>d&&/^\d{4}-\d{2}-\d{2}$/.test(d)?d.split('-').reverse().join('/'):(d||'');
 const idade=d=>{if(!d)return'';const h=new Date(),n=new Date(d);let i=h.getFullYear()-n.getFullYear();if(h.getMonth()-n.getMonth()<0||(h.getMonth()-n.getMonth()===0&&h.getDate()<n.getDate()))i--;return ` (${i} anos)`;};
 
 let dadosGlobais=null;
@@ -255,6 +275,7 @@ function gerar(){
   const nome=get('nome');
   const assin=get('inputAssinatura');
   if(!nome){alert('Por favor, informe seu nome completo.');return;}
+  if(!get('dataNasc')){alert('Informe a data de nascimento completa no formato dd/mm/aaaa (ex.: 15/03/1990).');return;}
   if(!get('tel')){alert('Por favor, informe seu telefone.');return;}
   if(!document.getElementById('aceite').checked){alert('Por favor, confirme que as informações são verdadeiras.');return;}
   if(!assin){alert('Por favor, digite seu nome no campo de assinatura eletrônica.');return;}
@@ -341,7 +362,7 @@ function gerarPDF(){
 
   sec('Dados Pessoais');
   campo('Nome completo',d.nome,true);
-  duplo(['Data de nascimento',d.dataNasc+idade(d.dataNasc)],['CPF',d.cpf]);
+  duplo(['Data de nascimento',fmtData(d.dataNasc)+idade(d.dataNasc)],['CPF',d.cpf]);
   duplo(['Telefone',d.tel],['E-mail',d.email]);
   duplo(['Profissão',d.profissao],['Como nos conheceu',d.indicacao]);
   y+=3;
